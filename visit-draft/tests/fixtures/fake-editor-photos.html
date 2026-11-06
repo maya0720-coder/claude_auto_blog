@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><title>fake editor with photos</title></head>
+<body>
+  <!--
+    스마트에디터 ONE을 흉내 낸 합성 화면(실제 네이버 화면 아님).
+    사진 버튼 → 파일 선택 → 마지막으로 커서가 있던 컴포넌트 뒤에 사진 컴포넌트(+설명 칸)와 빈 본문 문단을 넣는다.
+    발행 버튼이 눌리면 window.__published가 true가 된다.
+  -->
+  <header>
+    <button type="button" class="save_btn__fake" onclick="document.getElementById('toast').hidden = false">저장</button>
+    <button type="button" class="publish_btn__fake" onclick="window.__published = true">발행</button>
+    <button type="button" class="se-image-toolbar-button" aria-label="사진" onclick="document.getElementById('file').click()">사진</button>
+    <input id="file" type="file" hidden>
+  </header>
+  <div class="se-documentTitle"><p class="se-text-paragraph" contenteditable="true"></p></div>
+  <div id="body">
+    <div class="se-component se-text"><p class="se-text-paragraph" contenteditable="true"></p></div>
+  </div>
+  <div id="toast" hidden>저장되었습니다</div>
+  <script>
+    window.__published = false;
+    let lastComponent = document.querySelector("#body .se-component");
+    document.addEventListener("focusin", (e) => {
+      const c = e.target.closest && e.target.closest("#body .se-component");
+      if (c) lastComponent = c;
+    });
+    document.getElementById("file").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      const image = document.createElement("div");
+      image.className = "se-component se-image";
+      image.innerHTML = '<img alt=""><div class="se-caption"><p class="se-text-paragraph" contenteditable="true"></p></div>';
+      image.querySelector("img").src = URL.createObjectURL(file);
+      image.dataset.name = file.name;
+      const text = document.createElement("div");
+      text.className = "se-component se-text";
+      text.innerHTML = '<p class="se-text-paragraph" contenteditable="true"></p>';
+      lastComponent.after(image, text);
+      e.target.value = "";
+    });
+  </script>
+</body>
+</html>

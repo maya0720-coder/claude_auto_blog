@@ -1,0 +1,88 @@
+{
+  "app": {
+    "host": "127.0.0.1",
+    "port": 3000,
+    "startupTimeoutMs": 60000,
+    "logFile": "data/logs/app.log",
+    "logMaxBytes": 5242880
+  },
+  "browser": {
+    "profileDir": "data/browser-profile",
+    "headless": false,
+    "slowMoMs": 50
+  },
+  "timeouts": {
+    "loginWaitMs": 300000,
+    "stepMs": 20000,
+    "optionalMs": 5000,
+    "imageUploadMs": 60000,
+    "saveConfirmMs": 15000
+  },
+  "retries": {
+    "step": 2
+  },
+  "reader": {
+    "postCount": 10,
+    "maxPostCount": 20,
+    "minIntervalMs": 1000,
+    "maxIntervalMs": 3000
+  },
+  "images": {
+    "pocMaxCount": 3,
+    "allowedExtensions": [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".webp"
+    ],
+    "maxBytes": 31457280,
+    "stripMetadata": true,
+    "jobMaxCount": 20,
+    "aiMaxEdge": 1568,
+    "uploadMaxEdge": 3000,
+    "jpegQuality": 90
+  },
+  "output": {
+    "pocDir": "data/poc",
+    "debugDir": "data/debug"
+  },
+  "faces": {
+    "defaultMode": "mosaic",
+    "minConfidence": 0.25,
+    "maxFaces": 50,
+    "boxPadding": 0.05,
+    "mosaicCells": 8,
+    "detectTimeoutMs": 60000
+  },
+  "ai": {
+    "provider": "google",
+    "google": {
+      "model": "gemini-3.6-flash",
+      "researchThinking": "low",
+      "analyzeThinking": "low",
+      "writerThinking": "medium"
+    },
+    "anthropic": {
+      "model": "claude-opus-5-5",
+      "researchEffort": "medium",
+      "analyzeEffort": "low",
+      "writerEffort": "high"
+    },
+    "maxTokens": 32000,
+    "maxWebSearches": 6,
+    "maxWebFetches": 4,
+    "requestTimeoutMs": 600000,
+    "styleSampleChars": 1500,
+    "templateSampleChars": 4000,
+    "styleSamplePosts": 3
+  },
+  "jobs": {
+    "dir": "data/jobs",
+    "retentionDays": 7,
+    "styleCacheHours": 168
+  },
+  "save": {
+    "dailyLimit": 10,
+    "countFile": "data/save-count.json"
+  }
+}

@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><title>fake editor</title></head>
+<body>
+  <!-- 스마트에디터 ONE을 흉내 낸 합성 화면. 발행 버튼이 눌리면 window.__published가 true가 된다. -->
+  <header>
+    <button type="button" class="save_btn__fake" onclick="document.getElementById('toast').hidden = false">저장</button>
+    <button type="button" class="publish_btn__fake" onclick="window.__published = true"><span class="text">발행</span></button>
+    <button type="button" class="plain_btn" aria-label="발행하기" onclick="window.__published = true">→</button>
+  </header>
+  <div class="se-documentTitle"><p class="se-text-paragraph" contenteditable="true"></p></div>
+  <div class="se-component se-text"><p class="se-text-paragraph" contenteditable="true"></p></div>
+  <div id="toast" hidden>저장되었습니다</div>
+  <script>window.__published = false;</script>
+</body>
+</html>

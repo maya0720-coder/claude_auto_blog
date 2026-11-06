@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>테스트 블로그</title>
+    <link>https://blog.naver.com/test_blog</link>
+    <item>
+      <title><![CDATA[성수동 카페 방문기]]></title>
+      <link>https://blog.naver.com/test_blog/223000000001?fromRss=true&amp;trackingCode=rss</link>
+      <category>카페</category>
+      <pubDate>Mon, 02 Nov 2026 10:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>맛집 후기</title>
+      <link>https://blog.naver.com/test_blog/223000000002</link>
+      <pubDate>Sun, 01 Nov 2026 10:00:00 +0900</pubDate>
+    </item>
+    <item>
+      <title>다른 블로그 글</title>
+      <link>https://blog.naver.com/other_blog/223000000003</link>
+    </item>
+    <item>
+      <title>외부 링크</title>
+      <link>https://example.com/223000000004</link>
+    </item>
+  </channel>
+</rss>

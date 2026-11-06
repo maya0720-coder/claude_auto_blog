@@ -1,0 +1,9 @@
+node_modules/
+# 로컬 데이터: DB, 사진, 브라우저 프로필(로그인 세션), 디버그 스냅샷, PoC 결과
+data/
+.env
+.env.local
+.env.*.local
+.next/
+next-env.d.ts
+*.tsbuildinfo
