@@ -4,6 +4,7 @@ import type { Defaults, Selectors, TargetSpec } from "../config/schema";
 import { saveScreenshot } from "../util/debug";
 import { safeClick } from "./publishGuard";
 import { isOnLoginPage } from "./session";
+import { hasEmoji, splitEmoji, withoutEmoji } from "./textSegments";
 import { allMatches, findOptionalTarget, findTarget, type LocatorRoot } from "./target";
 
 export class SessionExpiredError extends Error {
@@ -116,8 +117,40 @@ export class EditorDriver {
   /** 현재 커서 위치에 문단들을 입력한다. 마지막에 Enter를 눌러 다음 내용이 새 문단에서 시작하게 한다. */
   async typeParagraphs(lines: string[]): Promise<void> {
     for (const line of lines) {
-      if (line) await this.page.keyboard.insertText(line);
+      if (line) await this.typeLine(line);
       await this.page.keyboard.press("Enter");
+    }
+  }
+
+  /**
+   * 소제목: 굵게(Ctrl+B 켜고 끄기) 한 줄로 넣고, 아래에 빈 줄을 둔다.
+   * 단축키를 지원하지 않는 화면이면 굵게만 빠지고 글자는 그대로 들어간다.
+   */
+  async typeHeading(text: string): Promise<void> {
+    await this.page.keyboard.press("Control+b");
+    await this.typeLine(text);
+    await this.page.keyboard.press("Control+b");
+    await this.page.keyboard.press("Enter");
+  }
+
+  /**
+   * 한 줄 입력. 이모지가 섞이면 조각별로 나눠 넣는다(한 번에 넣으면 이모지 뒤 글자가 사라졌음).
+   * 넣은 뒤 이모지를 뺀 글자가 화면에 있는지 확인하고, 없으면 키 입력으로 다시 넣는다.
+   */
+  private async typeLine(line: string): Promise<void> {
+    if (!hasEmoji(line)) {
+      await this.page.keyboard.insertText(line);
+      return;
+    }
+    for (const seg of splitEmoji(line)) await this.page.keyboard.insertText(seg);
+    const plain = withoutEmoji(line);
+    if (!plain) return;
+    const probe = plain.slice(-Math.min(plain.length, 20));
+    const typed = this.root.locator(this.sel.blog.paragraph).filter({ hasText: probe });
+    try {
+      await typed.first().waitFor({ state: "attached", timeout: this.timeouts.optionalMs });
+    } catch {
+      await this.page.keyboard.type(` ${plain}`);
     }
   }
 

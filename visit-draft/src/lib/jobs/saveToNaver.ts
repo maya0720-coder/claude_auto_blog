@@ -4,6 +4,7 @@
  */
 import path from "node:path";
 import type { Defaults, Selectors } from "../config/schema";
+import { renderCopies } from "../images/process";
 import { openPersistentBrowser } from "../naver/browser";
 import { EditorDriver, SessionExpiredError } from "../naver/editorDriver";
 import { PublishBlockedError } from "../naver/publishGuard";
@@ -30,6 +31,8 @@ export async function runSave(
     throw new UserFacingError(`오늘 임시저장 한도(${cfg.save.dailyLimit}회)를 다 썼습니다. 내일 다시 시도해 주세요.`);
   }
   const draft = ensureDisclosure(job.draft, job.input.options.disclosure);
+  // 업로드 사본을 현재 설정(본문 폭에 맞춘 크기 등)으로 다시 만든다. 예전에 만든 작업도 같은 크기로 올라간다
+  for (const photo of job.photos) await renderCopies(store, jobId, photo, job.input.options.faceMode, cfg);
   const prevStatus = job.status;
   store.update(jobId, (j) => ({ ...j, status: "saving" }));
 
@@ -49,17 +52,13 @@ export async function runSave(
     await withRetry(cfg.retries.step, () => driver.open(job.input.blogId, job.input.categoryNo), (e) => !(e instanceof SessionExpiredError));
     if ((await driver.handleResumeDialog()) === "dismissed") emit({ type: "log", message: "'작성 중인 글' 팝업이 떠서 새 글로 시작했습니다." });
     await driver.closeHelpPanel();
-    const categoryVisible = (await driver.probeCategoryControl()) === "visible";
     step("editor", "ok");
 
     current = "content";
     step("content", "running");
     await driver.setTitle(draft.title);
     await driver.focusBodyStart();
-    if (job.input.categoryNo && !categoryVisible) {
-      // 임시저장 화면에서 카테고리를 고를 수 없으면, 발행 전에 사용자가 고를 수 있도록 메모를 남긴다(설계서 F7-6)
-      await driver.typeParagraphs([`[저장 예정 카테고리 번호: ${job.input.categoryNo}] ← 발행 전에 카테고리를 고르고 이 줄을 지워 주세요`, ""]);
-    }
+    // 카테고리는 글쓰기 주소(categoryNo)로 넘긴다. 본문에 안내 문구를 넣지 않고, 확인 안내는 앱 화면에 띄운다
     const photoCount = draft.blocks.filter((b) => b.type === "photo").length;
     let photoDone = 0;
     let captionFallbacks = 0;
@@ -74,6 +73,8 @@ export async function runSave(
         }
         photoDone += 1;
         emit({ type: "log", message: `사진 ${photoDone}/${photoCount} 올림` });
+      } else if (block.type === "heading") {
+        await driver.typeHeading(block.text);
       } else {
         await driver.typeParagraphs([...block.text.split("\n"), ""]);
       }

@@ -4,7 +4,6 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import type { APIRequestContext } from "playwright";
 import { describe, expect, it } from "vitest";
 import { parsePhotoNotes } from "../../src/lib/ai/photoNotes";
 import { AiError, researchPromptName, researchUserPrompt, writerContext } from "../../src/lib/ai/shared";
@@ -12,7 +11,7 @@ import { loadSelectors } from "../../src/lib/config/load";
 import { JobInputError, parsePayload } from "../../src/lib/jobs/create";
 import { memoLines } from "../../src/lib/jobs/reviewKinds";
 import { jobInputSchema, type Job } from "../../src/lib/jobs/types";
-import { readSinglePost } from "../../src/lib/naver/blogReader";
+import { readSinglePost, type HttpGetter } from "../../src/lib/naver/blogReader";
 
 const sel = loadSelectors();
 const base = {
@@ -115,7 +114,7 @@ describe("readSinglePost (참고 블로그 글 한 편)", () => {
         seen.push(url);
         return { ok: () => status < 400, status: () => status, text: async () => body };
       },
-    }) as unknown as APIRequestContext;
+    }) satisfies HttpGetter;
 
   it("지정한 글만 읽어 구성 발췌를 만든다", async () => {
     const seen: string[] = [];

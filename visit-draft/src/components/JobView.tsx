@@ -4,13 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import { api, errorText } from "../lib/client/api";
 import { FACE_MODE_LABELS, STATUS_LABELS } from "../lib/client/labels";
 import type { FaceMode } from "../lib/config/schema";
+import { withPlaceInfo } from "../lib/jobs/placeInfo";
 import { KIND_TEXT } from "../lib/jobs/reviewKinds";
 import { draftToPlainText, type Job } from "../lib/jobs/types";
 import type { RunKind } from "../lib/runs/types";
 import { DraftEditor } from "./DraftEditor";
 import { PhotoNotesPanel } from "./PhotoNotesPanel";
 import { ResearchPanel } from "./ResearchPanel";
+import { ReviewPointsPanel } from "./ReviewPointsPanel";
 import { Segmented } from "./Segmented";
+import { SourcesPanel } from "./SourcesPanel";
 
 interface Props {
   jobId: string;
@@ -65,6 +68,13 @@ export function JobView({ jobId, onRun, onBack }: Props) {
       setJob(r.job);
     });
 
+  const addPlaceInfo = () =>
+    act(async () => {
+      const r = await api.put<{ job: Job }>(`/api/jobs/${jobId}`, { draft: withPlaceInfo(job!.draft!, job!) });
+      setJob(r.job);
+      setNotice("원고 끝에 방문 정보(주소·운영시간·네이버 지도 링크)를 넣었습니다.");
+    });
+
   const remove = () => {
     if (!window.confirm("이 작업과 사진을 모두 지울까요? 네이버에 저장된 글은 지워지지 않습니다.")) return;
     void act(async () => {
@@ -91,6 +101,10 @@ export function JobView({ jobId, onRun, onBack }: Props) {
             <p className="hint">오른쪽의 [다시 시도]로 원고를 다시 만들 수 있습니다.</p>
           </section>
         )}
+        {hasDraft && (
+          <ReviewPointsPanel job={job} disabled={busy || dirty} onRewrite={(confirmedPoints) => void start("generate", { full: false, confirmedPoints }, "generate")} />
+        )}
+        <SourcesPanel job={job} onAddInfo={() => void addPlaceInfo()} disabled={busy || dirty} />
       </div>
 
       <div className="col sticky">
@@ -109,7 +123,7 @@ export function JobView({ jobId, onRun, onBack }: Props) {
               <strong>네이버에 임시저장했습니다</strong> ({new Date(job.saved.at).toLocaleString("ko-KR")})
               <ol className="checklist">
                 <li>글쓰기 화면의 &lsquo;저장 글&rsquo; 목록에서 글을 열어 확인하세요.</li>
-                <li>사진·카테고리를 확인한 뒤 직접 발행하세요. 이 앱은 발행하지 않습니다.</li>
+                <li>사진·카테고리{job.input.categoryNo ? `(${job.input.categoryNo}번)` : ""}를 확인한 뒤 직접 발행하세요. 이 앱은 발행하지 않습니다.</li>
               </ol>
               {job.saved.screenshot && (
                 <details>

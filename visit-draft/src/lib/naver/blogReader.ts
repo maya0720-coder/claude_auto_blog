@@ -1,4 +1,3 @@
-import type { APIRequestContext } from "playwright";
 import { fillTemplate } from "../config/load";
 import type { Defaults } from "../config/schema";
 import { errorSummary, politeDelay } from "../util/common";
@@ -37,7 +36,15 @@ export interface ExcerptOptions {
   maxChars: number;
 }
 
-async function getText(request: APIRequestContext, url: string, timeoutMs: number): Promise<string> {
+/**
+ * 주소의 본문을 받아 오는 최소 인터페이스. 실제 앱은 브라우저 창(pageFetcher.ts),
+ * PoC는 Playwright APIRequestContext, 테스트는 가짜 객체를 넘긴다.
+ */
+export interface HttpGetter {
+  get(url: string, opts: { timeout: number; maxRedirects: number }): Promise<{ ok(): boolean; status(): number; text(): Promise<string> }>;
+}
+
+async function getText(request: HttpGetter, url: string, timeoutMs: number): Promise<string> {
   const res = await request.get(url, { timeout: timeoutMs, maxRedirects: 3 });
   if (!res.ok()) throw new BlogReadError(`HTTP ${res.status()}`);
   return res.text();
@@ -48,7 +55,7 @@ async function getText(request: APIRequestContext, url: string, timeoutMs: numbe
  * 두 경로 모두 비공식이므로 PoC에서 동작을 확인한다. 요청 사이에는 1~3초를 둔다.
  */
 export async function readRecentPosts(
-  request: APIRequestContext,
+  request: HttpGetter,
   blogId: string,
   count: number,
   sel: BlogSelectors,
@@ -100,7 +107,7 @@ export async function readRecentPosts(
 
 /** 글 한 편만 읽는다(참고 블로그 주소가 특정 글일 때). 지표·발췌는 readRecentPosts와 같은 형식 */
 export async function readSinglePost(
-  request: APIRequestContext,
+  request: HttpGetter,
   blogId: string,
   logNo: string,
   sel: BlogSelectors,

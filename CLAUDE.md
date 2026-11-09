@@ -44,6 +44,7 @@ npm run poc -- --blog <blogId> --images a.jpg   # 0단계 PoC 명령줄(임시�
                    → mask.ts(모자이크/스티커) → ai/·upload/ 사본(EXIF 없음). 실패하면 작업 중단
           analyze  ai/provider.analyzePhotos(AI용 사본 → 사진별 종류·설명·읽은 글자·설명 초안, ai/photoNotes.ts로 검증) — 실패해도 계속
           style    naver/styleNote.ts(내 블로그 RSS+모바일 본문, 또는 참고 블로그/글 한 편 → 지표·발췌, 캐시) — 실패해도 계속
+                   네이버는 스크립트 HTTP 요청(Playwright request·fetch)에 응답하지 않아 naver/pageFetcher.ts가 보이는 브라우저 창(로그인 프로필 아님)으로 읽는다. UA 위장 등 차단 우회 금지
           research ai/provider.researchPlace(종류별 프롬프트, 사진에서 읽은 글자를 단서로) — 실패해도 계속
           write    ai/provider.writeDraft(AI용 사본 + 사진 분석 + 조사 + 메모 + 문체 → 구조화 출력, zod·사진 정합성 검사 후 최대 2회 재요청)
   GET /api/runs/[id]/events (SSE, 처음부터 다시 보냄) ← lib/client/useRunStream.ts
@@ -71,6 +72,9 @@ npm run poc -- --blog <blogId> --images a.jpg   # 0단계 PoC 명령줄(임시�
 - **기존 임시글 보호:** "작성 중인 글이 있습니다" 팝업에서는 항상 "새로 작성" 쪽을 고른다.
 - 네이버 아이디·비밀번호를 받거나 저장하지 않는다. 로그인·캡차는 사용자가 열린 크롬 창에서 직접 처리한다.
 - **얼굴은 외부 전송 전에 가린다:** AI로 보내는 사진은 `ai/` 사본(얼굴 가림·EXIF 없음)뿐이다. 얼굴 인식이 실패하면 작업을 멈춘다(가리지 않은 사진을 보내지 않음).
+- **방문 정보·링크는 코드로 만든다:** 장소 후기 끝의 "📍 방문 정보" 블록(`lib/jobs/placeInfo.ts`)은 원고 작성 직후 코드가 붙인다. 네이버 지도는 사용자가 준 네이버 지도 링크 → 없으면 지도 검색 링크, 네이버 예약은 조사 결과 중 `booking.naver.com/booking/N/bizes/N` 형식만. AI가 만든 링크를 검사 없이 글에 넣지 않는다. 참고한 사이트 목록은 앱 화면에만 보이고 네이버에는 넣지 않는다.
+- **네이버 입력 방식:** 이모지가 섞인 줄은 조각으로 나눠 넣는다(한 번에 넣으면 이모지 뒤 글자가 사라졌음, `naver/textSegments.ts`). 소제목은 Ctrl+B로 굵게. 업로드 사본은 `images.uploadMinWidth`보다 좁으면 키워 사진 폭을 맞춘다. 본문에 카테고리 안내 같은 작업용 문구를 넣지 않는다.
+- **남의 후기를 내 경험으로 쓰지 않는다:** 조사는 다른 방문자·사용자 후기에서 자주 나온 포인트(`research.reviewPoints`)도 모은다. 사용자가 화면에서 체크한 것(`job.confirmedPoints`, 조사 결과 문구만 허용)만 1인칭 경험으로, 나머지는 "후기를 보니 ~" 같은 정보·팁으로만 쓴다(`lib/jobs/reviewPoints.ts`, `writer.system.md`). 이 구분을 없애는 변경은 하지 않는다(독자를 속이는 후기).
 - **사실과 경험 구분:** 사실 정보는 조사 결과(출처 있는 것)만, 맛·친절 같은 경험 평가는 방문 메모에 있는 것만 쓴다(`prompts/writer.system.md`). 협찬 표기는 `ensureDisclosure`로 코드에서 보장한다.
 - AI 출력은 항상 zod 스키마(`lib/jobs/types.ts`)로 검증한다. 네이버 선택자는 `config/selectors.json`에만 둔다(role/label → text → CSS, 고정 sleep 금지).
 - 비밀 키는 `.env.local`에서만 읽는다. 테스트에 키 모양 문자열을 넣지 않는다(가드 hook이 막음, `vi.stubEnv`로 아무 값이나 넣는다).

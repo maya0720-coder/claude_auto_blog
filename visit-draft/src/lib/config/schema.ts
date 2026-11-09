@@ -103,6 +103,8 @@ export const defaultsSchema = z
       jobMaxCount: z.number().int().min(1).max(50),
       aiMaxEdge: z.number().int().min(256).max(4096),
       uploadMaxEdge: z.number().int().min(512).max(8000),
+      /** 네이버는 본문 폭보다 좁은 사진을 원래 크기로 왼쪽에 붙인다. 이보다 좁은 업로드 사본은 이 폭까지 키운다(0이면 끔) */
+      uploadMinWidth: z.number().int().min(0).max(4000),
       jpegQuality: z.number().int().min(50).max(100),
     }),
     output: z.object({

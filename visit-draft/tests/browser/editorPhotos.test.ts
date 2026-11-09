@@ -75,6 +75,35 @@ describe("EditorDriver.insertPhoto (합성 화면)", () => {
     expect(await page.evaluate(() => (window as unknown as { __published: boolean }).__published)).toBe(false);
   });
 
+  it("소제목: 이모지와 섞인 입력을 한 번에 받으면 뒤 글자를 버리는 화면에서도 소제목 글자가 모두 들어간다", async () => {
+    page = await browser.newPage();
+    await page.goto(fixtureUrl);
+    await page.evaluate(() => {
+      // 실제 저장에서 본 증상 재현: 이모지 + 글자를 한 번에 넣으면 이모지만 남긴다
+      document.addEventListener(
+        "beforeinput",
+        (e) => {
+          const data = e.data ?? "";
+          const emoji = data.match(/^\p{Extended_Pictographic}️?/u)?.[0];
+          if (e.inputType === "insertText" && emoji && data.length > emoji.length) {
+            e.preventDefault();
+            document.execCommand("insertText", false, emoji);
+          }
+        },
+        true,
+      );
+    });
+    const driver = new EditorDriver(page, sel, timeouts);
+    await driver.focusBodyStart();
+    await driver.typeHeading("🌿 남양주 비스타밸리로 떠난 가족 나들이");
+    await driver.typeParagraphs(["본문 문단"]);
+    const text = await page.evaluate(() => document.querySelector("#body")!.textContent ?? "");
+    expect(text).toContain("🌿 남양주 비스타밸리로 떠난 가족 나들이");
+    expect(text).toContain("본문 문단");
+    // 소제목은 굵게
+    expect(await page.evaluate(() => document.querySelector("#body b, #body strong")?.textContent ?? "")).toContain("남양주 비스타밸리");
+  });
+
   it("설명 칸이 없는 화면이면 captionOk=false를 돌려준다(호출한 쪽이 본문에 적음)", async () => {
     page = await browser.newPage();
     await page.goto(fixtureUrl);

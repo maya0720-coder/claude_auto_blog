@@ -33,6 +33,19 @@ function resized(buf: Buffer, maxEdge: number, quality: number) {
     .toBuffer({ resolveWithObject: true });
 }
 
+/**
+ * 네이버 업로드용 사본: 긴 변을 줄이고, 본문 폭(minWidth)보다 좁은 사진은 폭을 키운다.
+ * 작은 사진이 원래 크기로 왼쪽에 붙어 사진마다 크기가 달라 보이는 것을 막는다.
+ */
+export async function uploadCopy(buf: Buffer, maxEdge: number, minWidth: number, quality: number) {
+  const up = await resized(buf, maxEdge, quality);
+  if (!minWidth || up.info.width >= minWidth) return up;
+  return sharp(up.data, { failOn: "error" })
+    .resize({ width: minWidth, kernel: "lanczos3" })
+    .jpeg({ quality, mozjpeg: true })
+    .toBuffer({ resolveWithObject: true });
+}
+
 /** 저장된 얼굴 상자로 AI용·업로드용 사본을 다시 만든다(가리기 방식 변경 시에도 사용). */
 export async function renderCopies(
   store: JobStore,
@@ -45,7 +58,7 @@ export async function renderCopies(
   const opts = { padding: cfg.faces.boxPadding, mosaicCells: cfg.faces.mosaicCells };
   const ai = await resized(original, cfg.images.aiMaxEdge, cfg.images.jpegQuality);
   writeFileSync(store.photoPath(jobId, photo, "ai"), await applyFaceMask(ai.data, photo.faces, mode, opts));
-  const up = await resized(original, cfg.images.uploadMaxEdge, cfg.images.jpegQuality);
+  const up = await uploadCopy(original, cfg.images.uploadMaxEdge, cfg.images.uploadMinWidth, cfg.images.jpegQuality);
   const factor = up.info.width / photo.aiWidth;
   const boxes = photo.faces.map((b) => scaleBox(b, factor));
   writeFileSync(store.photoPath(jobId, photo, "upload"), await applyFaceMask(up.data, boxes, mode, opts));

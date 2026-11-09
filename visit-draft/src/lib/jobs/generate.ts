@@ -10,6 +10,8 @@ import { UserFacingError } from "../runs/runManager";
 import type { RunEvent } from "../runs/types";
 import { errorSummary } from "../util/common";
 import type { JobStore } from "./store";
+import { withPlaceInfo } from "./placeInfo";
+import { keepKnownConfirmed } from "./reviewPoints";
 import { ensureDisclosure, type Job } from "./types";
 
 /** 처음부터 다시 만들 때 지난 결과가 남지 않도록 필드를 지운다 */
@@ -86,17 +88,20 @@ export async function runGenerate(
     step("research", "running");
     try {
       const research = await researchPlace(job.input, cfg.ai, job.photoNotes);
-      job = store.update(jobId, (j) => ({ ...j, research }));
-      step("research", "ok", `확인한 정보 ${research.facts.length}개, 출처 ${research.sources.length}곳`);
+      // 새 조사에 없는 체크는 버린다(예전 포인트를 경험으로 쓰지 않게)
+      job = store.update(jobId, (j) => ({ ...j, research, confirmedPoints: keepKnownConfirmed(j.confirmedPoints, research.reviewPoints) }));
+      const pts = research.reviewPoints?.length ?? 0;
+      step("research", "ok", `확인한 정보 ${research.facts.length}개, 출처 ${research.sources.length}곳${pts ? `, 다른 후기 포인트 ${pts}개` : ""}`);
     } catch (err) {
-      job = store.update(jobId, (j) => omit(j, "research"));
+      job = store.update(jobId, (j) => omit(omit(j, "research"), "confirmedPoints"));
       step("research", "warning", `정보 조사에 실패해 사실 정보 없이 씁니다. (${aiErrorMessage(err)})`);
     }
   }
 
   step("write", "running");
   try {
-    const draft = ensureDisclosure(await writeDraft(job, store, cfg.ai), job.input.options.disclosure);
+    // 장소 후기는 끝에 방문 정보(주소·운영시간·네이버 지도/예약 링크)를 코드로 붙인다
+    const draft = withPlaceInfo(ensureDisclosure(await writeDraft(job, store, cfg.ai), job.input.options.disclosure), job);
     store.update(jobId, (j) => ({ ...j, draft, status: "draft_ready" }));
     step("write", "ok");
   } catch (err) {

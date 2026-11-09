@@ -88,12 +88,25 @@ export const photoNoteSchema = z.object({
   caption: z.string().trim().max(120),
 });
 
+/** 다른 방문자·사용자 후기에서 여러 번 나온 포인트. 사용자가 겪은 것이 아니므로 확인 전에는 정보·팁으로만 쓴다 */
+export const REVIEW_POINT_TYPES = ["highlight", "tip", "caution"] as const;
+export const reviewPointSchema = z.object({
+  point: z.string().trim().min(2).max(150),
+  type: z.enum(REVIEW_POINT_TYPES),
+  /** 이 내용을 본 후기 글 주소(http/https만) */
+  sources: z.array(z.string().max(500).regex(/^https?:\/\//i)).max(5),
+});
+export const MAX_REVIEW_POINTS = 12;
+
 export const researchSchema = z.object({
   summary: z.string().max(4000),
   facts: z
     .array(z.object({ label: z.string().max(50), value: z.string().max(500), source: z.string().max(500).optional() }))
     .max(30),
   sources: z.array(z.string().max(500)).max(30),
+  /** 조사에서 찾은 링크. 형식 검사는 placeInfo.ts에서 한다 */
+  links: z.object({ naverBooking: z.string().max(500).optional() }).optional(),
+  reviewPoints: z.array(reviewPointSchema).max(MAX_REVIEW_POINTS).optional(),
   checkedAt: z.string(),
 });
 
@@ -122,6 +135,8 @@ export const jobSchema = z.object({
   photoNotes: z.array(photoNoteSchema).max(50).optional(),
   research: researchSchema.optional(),
   styleNote: z.string().max(10000).optional(),
+  /** 사용자가 "나도 그랬다"고 체크한 후기 포인트(research.reviewPoints의 point 문구). 이것만 1인칭 경험으로 쓴다 */
+  confirmedPoints: z.array(z.string().max(150)).max(MAX_REVIEW_POINTS).optional(),
   draft: draftSchema.optional(),
   error: z.string().max(500).optional(),
   saved: z.object({ at: z.string(), confirmed: z.boolean(), screenshot: z.string().optional() }).optional(),
@@ -133,6 +148,7 @@ export type Photo = z.infer<typeof photoSchema>;
 export type PhotoNote = z.infer<typeof photoNoteSchema>;
 export type TemplateRef = z.infer<typeof templateRefSchema>;
 export type PlaceResearch = z.infer<typeof researchSchema>;
+export type ReviewPoint = z.infer<typeof reviewPointSchema>;
 export type DraftBlock = z.infer<typeof blockSchema>;
 export type PostDraft = z.infer<typeof draftSchema>;
 export type Job = z.infer<typeof jobSchema>;

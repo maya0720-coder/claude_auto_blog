@@ -5,11 +5,11 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { request } from "playwright";
 import { resolveDataPath } from "../config/load";
 import type { Defaults, Selectors } from "../config/schema";
 import { isValidBlogId } from "./blogUrl";
 import { readRecentPosts, readSinglePost, type ReadPostsResult } from "./blogReader";
+import { openPageFetcher } from "./pageFetcher";
 
 interface Cached {
   savedAt: string;
@@ -59,7 +59,8 @@ export async function buildStyleNote(source: StyleSource, cfg: Defaults, sel: Se
     }
   }
 
-  const ctx = await request.newContext({ extraHTTPHeaders: { "Accept-Language": "ko-KR,ko;q=0.9" } });
+  // 네이버가 스크립트 요청에는 응답하지 않아 브라우저 창으로 읽는다(pageFetcher.ts)
+  const ctx = await openPageFetcher(cfg);
   try {
     const result = logNo
       ? await readSinglePost(ctx, blogId, logNo, sel.blog, cfg.timeouts.stepMs, maxChars)
@@ -73,6 +74,6 @@ export async function buildStyleNote(source: StyleSource, cfg: Defaults, sel: Se
     writeFileSync(cacheFile, JSON.stringify({ savedAt: new Date().toISOString(), note } satisfies Cached), "utf8");
     return note;
   } finally {
-    await ctx.dispose();
+    await ctx.close();
   }
 }

@@ -5,7 +5,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { PROJECT_ROOT } from "../config/load";
+import { isNaverBookingUrl } from "../jobs/placeInfo";
 import { KIND_TEXT, memoLines } from "../jobs/reviewKinds";
+import { cleanReviewPoints, reviewPointSections } from "../jobs/reviewPoints";
 import {
   checkDraft,
   draftSchema,
@@ -44,12 +46,19 @@ export function parseResearch(text: string, checkedAt: string, extraSources: str
   } catch {
     throw new AiError("장소 조사 결과를 읽지 못했습니다. 다시 시도해 주세요.");
   }
-  const parsed = researchSchema.safeParse({ ...(raw as object), checkedAt });
+  // 후기 포인트는 항목별로 걸러, 일부가 틀려도 조사 결과 전체를 버리지 않는다
+  const rawObj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const reviewPoints = cleanReviewPoints(rawObj.reviewPoints);
+  const parsed = researchSchema.safeParse({ ...rawObj, reviewPoints, checkedAt });
   if (!parsed.success) throw new AiError("장소 조사 결과 형식이 올바르지 않습니다. 다시 시도해 주세요.");
   // 출처 URL은 http(s)만 남긴다(화면에서 링크로 보여 주므로)
   const sources = [...new Set([...parsed.data.sources, ...extraSources].filter(isWebUrl))].slice(0, 30);
+  // 예약 링크는 네이버 예약 형식일 때만 남긴다(다른 주소를 글에 넣지 않음)
+  const booking = parsed.data.links?.naverBooking?.trim();
+  const { links: _links, ...rest } = parsed.data;
   return {
-    ...parsed.data,
+    ...rest,
+    ...(isNaverBookingUrl(booking) ? { links: { naverBooking: booking } } : {}),
     sources,
     facts: parsed.data.facts.map((f) => (f.source && !isWebUrl(f.source) ? { label: f.label, value: f.value } : f)),
   };
@@ -106,6 +115,7 @@ export function writerContext(job: Job): string {
       research ? JSON.stringify({ summary: research.summary, facts: research.facts }, null, 1) : "조사 결과 없음 — 사실 정보는 쓰지 마세요.",
     ],
     [`## ${k.memoTitle}`, memo.length ? memo.join("\n") : "메모 없음 — 경험 평가는 쓰지 말고 사진에 보이는 것만 묘사하세요."],
+    ...reviewPointSections(job),
     ["## AI 사진 분석(사진 배치·설명에 활용)", photoNotesText(photoNotes) || "분석 결과 없음 — 사진을 직접 보고 판단하세요."],
     [styleTitle, styleNote || "참고할 글 없음"],
     [

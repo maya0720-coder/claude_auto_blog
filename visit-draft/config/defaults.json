@@ -40,6 +40,7 @@
     "jobMaxCount": 20,
     "aiMaxEdge": 1568,
     "uploadMaxEdge": 3000,
+    "uploadMinWidth": 1000,
     "jpegQuality": 90
   },
   "output": {
